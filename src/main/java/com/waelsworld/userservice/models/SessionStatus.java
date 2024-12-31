@@ -1,6 +1,6 @@
 package com.waelsworld.userservice.models;
 
-public enum Status {
+public enum SessionStatus {
     ACTIVE,
     INACTIVE
 }

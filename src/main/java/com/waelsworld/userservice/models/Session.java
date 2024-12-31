@@ -6,7 +6,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.ManyToOne;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.web.bind.support.SessionStatus;
 
 import java.util.Date;
 
@@ -19,5 +18,5 @@ public class Session extends BaseModel {
     @ManyToOne
     private User user;
     @Enumerated(EnumType.ORDINAL)
-    private Status sessionStatus;
+    private SessionStatus sessionStatus;
 }
