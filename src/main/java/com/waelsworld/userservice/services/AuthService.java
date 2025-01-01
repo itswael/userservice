@@ -7,25 +7,32 @@ import com.waelsworld.userservice.Repositories.UserRepository;
 import com.waelsworld.userservice.models.Session;
 import com.waelsworld.userservice.models.SessionStatus;
 import com.waelsworld.userservice.models.User;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.MacAlgorithm;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMapAdapter;
 
+import javax.crypto.SecretKey;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
-
-import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric;
 
 @Service
 public class AuthService {
-    SessionRepository sessionRepository;
-    UserRepository userRepository;
-    public AuthService(SessionRepository sessionRepository, UserRepository userRepository) {
-        this.sessionRepository = sessionRepository;
+    private final SessionRepository sessionRepository;
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    public AuthService(UserRepository userRepository, SessionRepository sessionRepository, BCryptPasswordEncoder bCryptPasswordEncoder) {
         this.userRepository = userRepository;
+        this.sessionRepository = sessionRepository;
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
     }
 
 
@@ -38,11 +45,29 @@ public class AuthService {
 
         User user = userOptional.get();
 
-        if (!user.getPassword().equals(password)) {
+//      for regular password validation
+//        if (!user.getPassword().equals(password)) {
+//            return null;
+//        }
+
+        // using bcrypt for password validation
+        if (!bCryptPasswordEncoder.matches(password, user.getPassword())) {
             return null;
         }
 
-        String token = RandomStringUtils.secureStrong().next(30);
+        // Regular Token generation can be done using random strings
+//        String token = RandomStringUtils.randomAlphanumeric(30);
+
+        // using JWT token generation
+        Map<String, Object> jsonForJwt = new HashMap<>();
+        jsonForJwt.put("email", user.getEmail());
+        jsonForJwt.put("roles", user.getRoles());
+        jsonForJwt.put("expirationDate", new Date());
+        //if(xx =!null)
+        jsonForJwt.put("createdAt" , new Date());
+        MacAlgorithm alg = Jwts.SIG.HS256;
+        SecretKey key = alg.key().build();
+        String token = Jwts.builder().claims(jsonForJwt).signWith(key, alg).compact();
 
         Session session = new Session();
         session.setSessionStatus(SessionStatus.ACTIVE);
@@ -88,6 +113,12 @@ public class AuthService {
 
     public SessionStatus validate(String token, Long userId) {
         Optional<Session> sessionOptional = sessionRepository.findByTokenAndUser_Id(token, userId);
+
+        MacAlgorithm alg = Jwts.SIG.HS256;
+        SecretKey key = alg.key().build();
+        Claims claims =
+                Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+
         return sessionOptional.map(Session::getSessionStatus).orElse(null);
     }
 }
