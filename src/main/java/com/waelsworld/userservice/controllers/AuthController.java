@@ -1,9 +1,9 @@
 package com.waelsworld.userservice.controllers;
 
 import com.waelsworld.userservice.Dto.*;
+import com.waelsworld.userservice.exceptions.UserAlreadyExistsException;
 import com.waelsworld.userservice.services.AuthService;
 import com.waelsworld.userservice.models.SessionStatus;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,7 +20,14 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<UserDto> login(@RequestBody LoginRequestDto request){
-        return authService.login(request.getEmail(), request.getPassword());
+//        System.out.println(request.getEmail() + request.getPassword());
+//        System.out.println("login");
+        try{
+            return authService.login(request.getEmail(), request.getPassword());
+            //return ResponseEntity.ok(userDto);
+        }catch (Exception e){
+            return ResponseEntity.status(401).body(null);
+        }
     }
 
     @PostMapping("/logout")
@@ -29,9 +36,14 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<UserDto> signUp(@RequestBody SignUpRequestDto request){
-        UserDto userDto = authService.signUp(request.getEmail(), request.getPassword());
-        return ResponseEntity.ok(userDto);
+    public ResponseEntity<UserDto> signUp(@RequestBody SignUpRequestDto request) {
+        try{
+            UserDto userDto = authService.signUp(request.getEmail(), request.getPassword());
+            System.out.println(userDto.getEmail() + userDto.getPassword());
+            return ResponseEntity.ok(userDto);
+        }catch (UserAlreadyExistsException e){
+            return ResponseEntity.status(409).body(null);
+        }
     }
 
     @PostMapping("/validate")

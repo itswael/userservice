@@ -4,12 +4,15 @@ import com.waelsworld.userservice.Dto.UserDto;
 
 import com.waelsworld.userservice.Repositories.SessionRepository;
 import com.waelsworld.userservice.Repositories.UserRepository;
+import com.waelsworld.userservice.exceptions.UserDoesNotExistsException;
 import com.waelsworld.userservice.models.Session;
 import com.waelsworld.userservice.models.SessionStatus;
 import com.waelsworld.userservice.models.User;
+import com.waelsworld.userservice.exceptions.UserAlreadyExistsException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.MacAlgorithm;
+import net.bytebuddy.implementation.bytecode.Throw;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -36,11 +39,11 @@ public class AuthService {
     }
 
 
-    public ResponseEntity<UserDto> login(String email, String password) {
+    public ResponseEntity<UserDto> login(String email, String password) throws UserDoesNotExistsException {
         Optional<User> userOptional = userRepository.findByEmail(email);
 
         if (userOptional.isEmpty()) {
-            return null;
+            throw new UserDoesNotExistsException("User with email: " + email + " not found.");
         }
 
         User user = userOptional.get();
@@ -101,10 +104,14 @@ public class AuthService {
         return ResponseEntity.ok().build();
     }
 
-    public UserDto signUp(String email, String password) {
+    public UserDto signUp(String email, String password) throws UserAlreadyExistsException {
+        User userOptional = userRepository.findByEmail(email).orElse(null);
+        if(userOptional != null){
+            throw new UserAlreadyExistsException("User with email: " + email + " already exists.");
+        }
         User user = new User();
         user.setEmail(email);
-        user.setPassword(password);
+        user.setPassword(bCryptPasswordEncoder.encode(password));
 
         User savedUser = userRepository.save(user);
 
