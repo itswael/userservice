@@ -1,7 +1,9 @@
 package com.waelsworld.userservice.controllers;
 
 import com.waelsworld.userservice.Dto.*;
+import com.waelsworld.userservice.exceptions.InvalidPasswordException;
 import com.waelsworld.userservice.exceptions.UserAlreadyExistsException;
+import com.waelsworld.userservice.exceptions.UserDoesNotExistsException;
 import com.waelsworld.userservice.services.AuthService;
 import com.waelsworld.userservice.models.SessionStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +27,7 @@ public class AuthController {
         try{
             return authService.login(request.getEmail(), request.getPassword());
             //return ResponseEntity.ok(userDto);
-        }catch (Exception e){
+        }catch (UserDoesNotExistsException | InvalidPasswordException e){
             return ResponseEntity.status(401).body(null);
         }
     }

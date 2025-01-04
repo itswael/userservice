@@ -4,6 +4,7 @@ import com.waelsworld.userservice.Dto.UserDto;
 
 import com.waelsworld.userservice.Repositories.SessionRepository;
 import com.waelsworld.userservice.Repositories.UserRepository;
+import com.waelsworld.userservice.exceptions.InvalidPasswordException;
 import com.waelsworld.userservice.exceptions.UserDoesNotExistsException;
 import com.waelsworld.userservice.models.Session;
 import com.waelsworld.userservice.models.SessionStatus;
@@ -12,8 +13,8 @@ import com.waelsworld.userservice.exceptions.UserAlreadyExistsException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.MacAlgorithm;
-import net.bytebuddy.implementation.bytecode.Throw;
-import org.apache.commons.lang3.RandomStringUtils;
+//import net.bytebuddy.implementation.bytecode.Throw;
+//import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMapAdapter;
 
 import javax.crypto.SecretKey;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class AuthService {
@@ -39,7 +37,7 @@ public class AuthService {
     }
 
 
-    public ResponseEntity<UserDto> login(String email, String password) throws UserDoesNotExistsException {
+    public ResponseEntity<UserDto> login(String email, String password) throws UserDoesNotExistsException, InvalidPasswordException {
         Optional<User> userOptional = userRepository.findByEmail(email);
 
         if (userOptional.isEmpty()) {
@@ -55,7 +53,7 @@ public class AuthService {
 
         // using bcrypt for password validation
         if (!bCryptPasswordEncoder.matches(password, user.getPassword())) {
-            return null;
+            throw new InvalidPasswordException("Password is incorrect");
         }
 
         // Regular Token generation can be done using random strings
@@ -65,12 +63,18 @@ public class AuthService {
         Map<String, Object> jsonForJwt = new HashMap<>();
         jsonForJwt.put("email", user.getEmail());
         jsonForJwt.put("roles", user.getRoles());
-        jsonForJwt.put("expirationDate", new Date());
+        jsonForJwt.put("userId", user.getId());
+        //jsonForJwt.put("expirationDate", new Date());
         //if(xx =!null)
-        jsonForJwt.put("createdAt" , new Date());
+        //jsonForJwt.put("createdAt" , new Date());
         MacAlgorithm alg = Jwts.SIG.HS256;
         SecretKey key = alg.key().build();
-        String token = Jwts.builder().claims(jsonForJwt).signWith(key, alg).compact();
+        String token = Jwts.builder()
+                .claims(jsonForJwt)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 30))
+                .signWith(key, alg)
+                .compact();
 
         Session session = new Session();
         session.setSessionStatus(SessionStatus.ACTIVE);
